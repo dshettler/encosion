@@ -25,6 +25,12 @@ module Encosion
   class NoFile < EncosionError
   end
   
+  class BrightcoveTimeoutException < EncosionError
+  end
+  
+  class HttpException < EncosionError
+  end
+  
   
   # The base for all Encosion objects
   class Base
@@ -52,23 +58,35 @@ module Encosion
       end
       
 
-      # Performs an HTTP GET
-      def get(server,port,secure,path,timeout,command,options)
-        http = HTTPClient.new
-        http.receive_timeout = timeout
-        url = secure ? 'https://' : 'http://'
-        url += "#{server}:#{port}#{path}"
+      # Performs an HTTP GET - listens for timeouts or other exceptions
+      def get(server,port,secure,path,timeout,retries,command,options)
+
+        body = nil        
+        begin
+
+          http = HTTPClient.new
+          http.receive_timeout = timeout
+          url = secure ? 'https://' : 'http://'
+          url += "#{server}:#{port}#{path}"
         
-        options.merge!({'command' => command })
-        query_string = options.collect { |key,value| "#{key.to_s}=#{value.to_s}" }.join('&')
+          options.merge!({'command' => command })
+          query_string = options.collect { |key,value| "#{key.to_s}=#{value.to_s}" }.join('&')
         
-        response = http.get(url, query_string)
+          response = http.get(url, query_string)
+
+          header = response.header
         
-        body = response.body.content.strip == 'null' ? nil : JSON.parse(response.body.content.strip)   # if the call returns 'null' then there were no valid results
-        header = response.header
+          http_error_check(header)
+
+          body = response.body.content.strip == 'null' ? nil : JSON.parse(response.body.content.strip)   # if the call returns 'null' then there were no valid results
         
-        error_check(header,body)
-        
+          api_error_check(body)
+        rescue BrightcoveTimeoutException => e
+          retry if (retries -=1 ) > 0
+          raise e
+        rescue BrightcoveException => e
+          raise e
+        end        
         # puts "url: #{url}\nquery_string:#{query_string}"
 
         return body
@@ -90,27 +108,40 @@ module Encosion
         body = JSON.parse(response.body.content.strip)
         header = response.header
 
-        error_check(header,body)
-        # if we get here then no exceptions were raised
+        http_error_check(header)
+        
+        retries = 5
+        
+        begin
+          api_error_check(body)
+        rescue BrightcoveTimeoutException
+          retry if (retries -=1 ) > 0
+        end
+        
+       # if we get here then no exceptions were raised
         return body
       end
       
       
-      # Checks the HTTP response and handles any errors
-      def error_check(header,body)
+      def http_error_check(header)
         if header.status_code == 200
-          return true if body.nil?
-          puts body['error']
-          if body.has_key? 'error' && !body['error'].nil?
+          return true
+        else
+          raise HttpException, "HTTP header status code: #{header.status_code}"
+        end
+      end
+      
+      def api_error_check(body)
+        unless body['error'].blank?
+          if body['code'] == '103'
+            message = 'Brightcove Timeout'
+            raise BrightcoveTimeoutException, message
+          else            
             message = "Brightcove responded with an error: #{body['error']} (code #{body['code']})"
-            body['errors'].each do |error| 
-              message += "\n#{error.values.first} (code #{error.values.last})"
-            end if body.has_key? 'errors'
             raise BrightcoveException, message
           end
         else
-          # should only happen if the Brightcove API is unavailable (even BC errors return a 200)
-          raise BrightcoveException, body + " (status code: #{header.status_code})"
+          return true
         end
       end
       

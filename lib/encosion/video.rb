@@ -139,6 +139,7 @@ module Encosion
               Encosion.options[:secure],
               Encosion.options[:read_path],
               Encosion.options[:read_timeout],
+              Encosion.options[:retries],
               method,
               options)
       end

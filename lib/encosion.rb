@@ -36,7 +36,8 @@ module Encosion
                 :read_path => READ_PATH, 
                 :write_path => WRITE_PATH,
                 :send_timeout => 120,
-                :receive_timeout => 60 }
+                :receive_timeout => 60,
+                :retries => 5 }
   attr_accessor :options
   
   # make @options available so it can be set externally when using the library
