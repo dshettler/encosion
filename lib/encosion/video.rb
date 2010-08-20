@@ -159,6 +159,14 @@ module Encosion
                     self)
       end
 
+      def from_array(args)
+        result = []
+        args.each do |v|
+          result << self.parse(v)
+        end
+        return result
+      end
+      
       protected
         # Find some videos by ids
         def find_one(id, options)

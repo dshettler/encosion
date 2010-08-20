@@ -71,7 +71,7 @@ module Encosion
         
           options.merge!({'command' => command })
           query_string = options.collect { |key,value| "#{key.to_s}=#{value.to_s}" }.join('&')
-        
+          puts "#{url}#{query_string}"
           response = http.get(url, query_string)
 
           header = response.header
