@@ -5,33 +5,6 @@ require 'json'
 
 module Encosion
   
-  # Generic Encosion error class
-  class EncosionError < StandardError
-  end
-  
-  # Raised when there is no token (required to use the Brightcove API)
-  class MissingToken < EncosionError
-  end
-  
-  # Raised when some parameter is missing that we need in order to do a search
-  class AssetNotFound < EncosionError
-  end
-  
-  # Raised when Brightcove doesn't like the call that was made for whatever reason
-  class BrightcoveException < EncosionError
-  end
-  
-  # Raised when Brightcove doesn't like the call that was made for whatever reason
-  class NoFile < EncosionError
-  end
-  
-  class BrightcoveTimeoutException < EncosionError
-  end
-  
-  class HttpException < EncosionError
-  end
-  
-  
   # The base for all Encosion objects
   class Base
     
@@ -63,7 +36,6 @@ module Encosion
 
         body = nil        
         begin
-
           http = HTTPClient.new
           http.receive_timeout = timeout
           url = secure ? 'https://' : 'http://'
@@ -81,10 +53,10 @@ module Encosion
           body = response.body.content.strip == 'null' ? nil : JSON.parse(response.body.content.strip)   # if the call returns 'null' then there were no valid results
         
           api_error_check(body)
-        rescue BrightcoveTimeoutException => e
-          retry if (retries -=1 ) > 0
+        rescue EncosionError => e
+          retry if (retries -=1 ) > 0 && e.okToRetry
           raise e
-        rescue BrightcoveException => e
+        rescue Exception => e
           raise e
         end        
         # puts "url: #{url}\nquery_string:#{query_string}"
@@ -110,14 +82,6 @@ module Encosion
 
         http_error_check(header)
         
-        retries = 5
-        
-        begin
-          api_error_check(body)
-        rescue BrightcoveTimeoutException
-          retry if (retries -=1 ) > 0
-        end
-        
        # if we get here then no exceptions were raised
         return body
       end
@@ -132,13 +96,24 @@ module Encosion
       end
       
       def api_error_check(body)
+        puts body
         unless body['error'].blank?
-          if body['code'] == '103'
-            message = 'Brightcove Timeout'
+          case body['code']
+          when 103
+            message = 'Brightcove Timeout -- tried 5 times to contact the API, and it returned timeout errors all five times.'
             raise BrightcoveTimeoutException, message
-          else            
+          when 100..199
+            message = "Brightcove responded with a system error: #{body['error']} (code #{body['code']})"
+            raise BrightcoveLowLevelException, message
+          when 200..299
             message = "Brightcove responded with an error: #{body['error']} (code #{body['code']})"
-            raise BrightcoveException, message
+            raise BrightcoveLowLevelException, message
+          when 300..399
+            message = "Brightcove responded with an error: #{body['error']} (code #{body['code']})"
+            raise BrightcoveHighLevelException, message
+          else
+            message = "Brightcove responded with an error: #{body['error']} (code #{body['code']})"
+            raise EncosionError, message
           end
         else
           return true
