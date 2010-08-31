@@ -15,6 +15,7 @@ module Encosion
                   :tags, 
                   :reference_id, 
                   :economics,
+                  :url,
                   :file)
       attr_reader(:id, 
                   :account_id, 
@@ -24,6 +25,7 @@ module Encosion
                   :last_modified_date, 
                   :video_still_url, 
                   :thumbnail_url, 
+                  :url,
                   :length, 
                   :plays_total, 
                   :plays_trailing_week)
@@ -208,6 +210,7 @@ module Encosion
                     :thumbnail_url => obj['thumbnailURL'],
                     :reference_id => obj['referenceID'],
                     :length => obj['length'].to_i,
+                    :url => obj['url'],
                     :economics => obj['economics'] ? ENUMS[:economics].find { |key,value| value == obj['economics'] }.first : nil,
                     :plays_total => obj['playsTotal'].to_i,
                     :plays_trailing_week => obj['playsTrailingWeek'].to_i } unless obj.nil?
@@ -229,6 +232,7 @@ module Encosion
       @long_description = args[:long_description]
       @creation_date = args[:creation_date]
       @published_date = args[:published_date]
+      @url = args[:url]
       @last_modified_date = args[:last_modified_date]
       @link_url = args[:link_url]
       @link_text = args[:link_text]
@@ -273,6 +277,7 @@ module Encosion
         :long_description => @long_description,
         :creation_date => @creation_date,
         :published_date => @published_date,
+        :url => @url,
         :last_modified_date => @last_modified_date,
         :link_url => @link_url,
         :link_text => @link_text,
