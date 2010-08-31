@@ -199,6 +199,7 @@ module Encosion
             args = {:id => obj['id'].to_i,
                     :name => obj['name'],
                     :short_description => obj['shortDescription'],
+                    :flv_url => obj['FLVURL'],
                     :long_description => obj['longDescription'],
                     :creation_date => Time.at(obj['creationDate'].to_i/1000),
                     :published_date => Time.at(obj['publishedDate'].to_i/1000),
@@ -229,6 +230,7 @@ module Encosion
       @id = args[:id]
       @name = args[:name]
       @short_description = args[:short_description]
+      @flv_url = args[:flv_url],
       @long_description = args[:long_description]
       @creation_date = args[:creation_date]
       @published_date = args[:published_date]
@@ -274,6 +276,7 @@ module Encosion
       { :id => @id,
         :name => @name,
         :short_description => @short_description,
+        :flv_url => @flv_url,
         :long_description => @long_description,
         :creation_date => @creation_date,
         :published_date => @published_date,
